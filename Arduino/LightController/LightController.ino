@@ -1,3 +1,9 @@
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+#define IN_BUFFER 20
+
 #define BTN_PIN   12
 #define POT_PIN   A0 
 #define RED_PIN   9
@@ -37,6 +43,11 @@ uint8_t red, green, blue;
 uint16_t potVal, sweepPos;
 uint32_t t1, t2, dT, temp;
 boolean prevState, currentState, btnClicked;
+
+const byte address[6] = "test01";
+RF24 radio(7, 8); // CE, CSN
+
+char inString[IN_BUFFER];
 
 // outputs the current rgb values
 void applyColor(){
@@ -207,8 +218,31 @@ void timeStep(){
   
 }
 
-void setup(){
+void checkRadio(){
+  
+  if(radio.available()){
+    
+    radio.read(&inString, IN_BUFFER);
+    
+    if(strncmp(inString, "COLOR_UP", 8) == 0)
+      return;
+    else if(strncmp(inString, "COLOR_DN", 8) == 0)
+      return;
+    else if(strncmp(inString, "SWEEP_UP", 8) == 0)
+      return;
+    else if(strncmp(inString, "SWEEP_DN", 8) == 0)
+      return;
+    
+  }
+}
 
+void setup(){
+  /*
+  radio.begin();
+  radio.openReadingPipe(0, address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.startListening();
+  */
   prevState = true;
   currentState = true;
   
@@ -231,6 +265,7 @@ void loop() {
 
   readButton();
   readPot();
+  checkRadio();
 
   switch(mode){
       
