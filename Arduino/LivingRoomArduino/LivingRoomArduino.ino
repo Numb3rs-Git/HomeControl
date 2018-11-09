@@ -1,30 +1,61 @@
 #include <IRremote.h>
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
 
-#define RECV_PIN   13
-#define LED_PIN     4
-#define BTN_PIN     5
-#define RELAY_PIN  10
-#define DOOR_PIN   11
-#define MOTION_PIN  8
-#define IN_BUFFER  20
+#define RECV_PIN   2
+#define LED_PIN    4
+#define BTN_PIN    3
+#define RELAY_PIN  5
+#define DOOR_PIN   6
+#define MOTION_PIN 7
+#define RADIO_CE   8
+#define RADIO_CSN  9
+#define IN_BUFFER 20
 
-boolean overrideState = false;
-boolean relayState = false;
+#define REMOTE_RED    0x4FB3AC5
+#define REMOTE_GREEN  0x4FBBA45
+#define REMOTE_YELLOW 0x4FB7A85
+#define REMOTE_BLUE   0x4FBFA05
+#define REMOTE_RIGHT  0x4FBD22D
+#define REMOTE_UP     0x4FBE21D
+#define REMOTE_LEFT   0x4FB926D
+#define REMOTE_DOWN   0x4FBB24D
+#define REMOTE_ENTER  0x4FB52AD
+
+boolean overrideState;
+boolean relayState;
+
 boolean btnState;
 boolean btnPrev;
+
 boolean motionState;
 boolean motionPrev;
+
 boolean doorOpen;
 boolean doorPrev;
-boolean inputRecieved = false;
+
+boolean inputRecieved;
 char inString[IN_BUFFER];
 char charin;
-uint8_t nChars = 0;
+uint8_t nChars;
+
 IRrecv irrecv(RECV_PIN);
 decode_results results;
 
+RF24 radio(RADIO_CE, RADIO_CSN);
+const byte address[6] = "test01";
+const char MSG_1[] = "0001";
+const char MSG_2[] = "0002";
+const char MSG_3[] = "0003";
+
 void setup()
 {
+  overrideState = false;
+  relayState = false;
+  inputRecieved = false;
+  nChars = 0;
+  
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, overrideState);
   
@@ -41,7 +72,13 @@ void setup()
   doorOpen = digitalRead(DOOR_PIN);
   
   irrecv.enableIRIn();
+  
   Serial.begin(9600);
+  
+  radio.begin();
+  radio.openWritingPipe(address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.stopListening();
 }
 
 void loop() {
@@ -89,20 +126,40 @@ void handleRemote(){
   if(irrecv.decode(&results)){
 
     switch(results.value){
-      case 0x4FB3AC5: // red button
+      case REMOTE_RED:
         toggleOverride();
         break;
     
-      case 0x4FBBA45: // green button
+      case REMOTE_GREEN:
         if(overrideState)
           setRelay(!relayState);
         break;
 
-      case 0x4FB7A85: // yellow button
+      case REMOTE_YELLOW:
         break;
 
-      case 0x4FBFA05: // blue button
+      case REMOTE_BLUE:
+        radio.write(&MSG_1, sizeof(MSG_1));
         break;
+        
+      case REMOTE_RIGHT:
+        radio.write(&MSG_2, sizeof(MSG_2));
+        break;
+      
+      case REMOTE_UP:
+        break;
+      
+      case REMOTE_LEFT:
+        radio.write(&MSG_3, sizeof(MSG_3));
+        break;
+      
+      case REMOTE_DOWN:
+        break;
+      
+      case REMOTE_ENTER:
+        break;
+        
+      break;
     }
     
     irrecv.resume();
