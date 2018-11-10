@@ -45,9 +45,9 @@ decode_results results;
 
 RF24 radio(RADIO_CE, RADIO_CSN);
 const byte address[6] = "test01";
-const char MSG_1[] = "0001";
-const char MSG_2[] = "0002";
-const char MSG_3[] = "0003";
+const char MSG_1[4] = "0001";
+const char MSG_2[4] = "0002";
+const char MSG_3[4] = "0003";
 
 void setup()
 {
