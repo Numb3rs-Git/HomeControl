@@ -44,10 +44,10 @@ IRrecv irrecv(RECV_PIN);
 decode_results results;
 
 RF24 radio(RADIO_CE, RADIO_CSN);
-const byte address[6] = "test01";
-const char RADIO_BLUE[4] = "BLUE";
-const char RADIO_RIGHT[5] = "RIGHT";
-const char RADIO_LEFT[4] = "LEFT";
+const byte address[] = "test01";
+const char RADIO_BLUE[] = "BLUE";
+const char RADIO_RIGHT[] = "RIGHT";
+const char RADIO_LEFT[] = "LEFT";
 
 void setup()
 {

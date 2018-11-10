@@ -28,9 +28,6 @@
 #define CLR_MAN   8
 #define LAST_CLR  8
 
-#define SWP_MAN   0
-#define SWP_AUTO  1
-
 #define INT_MAX   0xffffffffL
 #define STEP_DLY  500L // 0.5ms
 
@@ -42,18 +39,19 @@
 uint8_t SWP_STEPS;
 
 uint8_t btnSteps, potSteps, swpSteps, clrSteps;
-uint8_t mode, swpMode, color;
+uint8_t mode, color;
 uint8_t red, green, blue;
-uint16_t sliderVal, sweepPos;
+int sliderVal;
+uint16_t sweepPos;
 uint32_t t1, t2, dT, temp;
 boolean prevState, currentState, btnClicked, manualControl;
 
-const byte address[6] = "test01";
+const byte address[] = "test01";
 RF24 radio(RADIO_CE, RADIO_CSN);
 char inString[IN_BUFFER];
-const char RADIO_BLUE[4] = "BLUE";
-const char RADIO_RIGHT[5] = "RIGHT";
-const char RADIO_LEFT[4] = "LEFT";
+const char RADIO_BLUE[] = "BLUE";
+const char RADIO_RIGHT[] = "RIGHT";
+const char RADIO_LEFT[] = "LEFT";
 uint8_t radioSteps;
 
 // outputs the current rgb values
@@ -162,12 +160,7 @@ void nextMode(){
       break;
     
     case MODE_SWP:
-      if(swpMode == SWP_AUTO){
-        swpMode = SWP_MAN;
-        mode = MODE_CLR;
-      }
-      else
-        swpMode = SWP_AUTO;        
+      mode = MODE_CLR;        
       break; 
   }
 }
@@ -204,11 +197,13 @@ void checkRadio(){
       }
       else if(strncmp(inString, RADIO_RIGHT, sizeof(RADIO_RIGHT)) == 0){
         manualControl = false;
-        sliderVal = sliderVal > (1023 - 40) ? 1023 : sliderVal + 40;
+        sliderVal += 40;
+        sliderVal = sliderVal > 1023 ? sliderVal - 1023 : sliderVal;
       }
       else if(strncmp(inString, RADIO_LEFT, sizeof(RADIO_LEFT)) == 0){
         manualControl = false;
-        sliderVal = sliderVal < 40 ? 0 : sliderVal - 40;
+        sliderVal -= 40;
+        sliderVal = sliderVal < 0 ? sliderVal + 1023 : sliderVal;
       }
     }
   }
@@ -225,8 +220,7 @@ void readPot(){
 // moves to the next step of a sweep
 void doSweep(){
   
-  if(swpMode == SWP_MAN)
-    SWP_STEPS = 64 - (sliderVal >> 4);
+  SWP_STEPS = 64 - (sliderVal >> 4);
   
   if(swpSteps++ >= SWP_STEPS){    
     swpSteps = 0;
@@ -250,7 +244,6 @@ void timeStep(){
   
   delayMicroseconds(dT);
   t1 = micros();
-  
 }
 
 void setup(){
@@ -273,7 +266,6 @@ void setup(){
   mode = MODE_CLR;
   
   sweepPos = 0;
-  swpMode = SWP_MAN;
 
   pinMode(BTN_PIN, INPUT_PULLUP);
   t1 = micros();
@@ -295,8 +287,7 @@ void loop() {
       
     case MODE_SWP:
       doSweep();
-      break;
-      
+      break; 
   }
   
   timeStep();
