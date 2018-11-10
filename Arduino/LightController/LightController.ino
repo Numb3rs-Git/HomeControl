@@ -4,11 +4,14 @@
 
 #define IN_BUFFER 20
 
-#define BTN_PIN   12
+#define BTN_PIN   2
 #define POT_PIN   A0 
-#define RED_PIN   9
-#define GRN_PIN   10
-#define BLU_PIN   11
+#define RED_PIN   3
+#define GRN_PIN   5
+#define BLU_PIN   6
+
+#define RADIO_CE  7
+#define RADIO_CSN 8
 
 #define MODE_CLR  0
 #define MODE_SWP  1
@@ -31,23 +34,27 @@
 #define INT_MAX   0xffffffffL
 #define STEP_DLY  500L // 0.5ms
 
-#define POT_STEPS 100 // 50ms
-#define BTN_STEPS 20 // 10ms
-#define FULL_SWP  765 // 765 colors in the sweep
-#define CLR_STEPS 50 // 25ms
+#define RADIO_STEPS 50  // 25ms
+#define POT_STEPS   100 // 50ms
+#define BTN_STEPS   20  // 10ms
+#define FULL_SWP    765 // 765 colors in the sweep
+#define CLR_STEPS   50  // 25ms
 uint8_t SWP_STEPS;
 
 uint8_t btnSteps, potSteps, swpSteps, clrSteps;
 uint8_t mode, swpMode, color;
 uint8_t red, green, blue;
-uint16_t potVal, sweepPos;
+uint16_t sliderVal, sweepPos;
 uint32_t t1, t2, dT, temp;
-boolean prevState, currentState, btnClicked;
+boolean prevState, currentState, btnClicked, manualControl;
 
 const byte address[6] = "test01";
-RF24 radio(7, 8); // CE, CSN
-
+RF24 radio(RADIO_CE, RADIO_CSN);
 char inString[IN_BUFFER];
+const char RADIO_BLUE[4] = "BLUE";
+const char RADIO_RIGHT[5] = "RIGHT";
+const char RADIO_LEFT[4] = "LEFT";
+uint8_t radioSteps;
 
 // outputs the current rgb values
 void applyColor(){
@@ -131,7 +138,7 @@ void setSolid(){
         break;
         
       case CLR_MAN:
-        temp = potVal;
+        temp = sliderVal;
         temp *= 764;
         temp /= 1023;
         sweepPos = temp;
@@ -143,8 +150,8 @@ void setSolid(){
   }
 }
 
-// runs when the button is clicked
-void onClick(){
+// changes color mode
+void nextMode(){
   
   switch(mode){
     
@@ -165,7 +172,7 @@ void onClick(){
   }
 }
 
-// checks the current button state, checks if it was clicked, and calls onClick()
+// checks the current button state, checks if it was clicked, and calls nextMode()
 void readButton(){
   
   if(btnSteps++ >= BTN_STEPS){
@@ -174,8 +181,36 @@ void readButton(){
     btnClicked = currentState && !prevState; // button up
     prevState = currentState;
     
-    if(btnClicked)
-      onClick();
+    if(btnClicked){
+      manualControl = true;
+      nextMode();
+    }
+  }
+}
+
+void checkRadio(){
+  
+  if(radioSteps++ >= RADIO_STEPS){
+    
+    radioSteps = 0;
+  
+    if(radio.available()){
+      
+      radio.read(&inString, IN_BUFFER);
+      
+      if(strncmp(inString, RADIO_BLUE, sizeof(RADIO_BLUE)) == 0){
+        manualControl = false;
+        nextMode();
+      }
+      else if(strncmp(inString, RADIO_RIGHT, sizeof(RADIO_RIGHT)) == 0){
+        manualControl = false;
+        sliderVal = sliderVal > (1023 - 40) ? 1023 : sliderVal + 40;
+      }
+      else if(strncmp(inString, RADIO_LEFT, sizeof(RADIO_LEFT)) == 0){
+        manualControl = false;
+        sliderVal = sliderVal < 40 ? 0 : sliderVal - 40;
+      }
+    }
   }
 }
 
@@ -183,7 +218,7 @@ void readButton(){
 void readPot(){
   if(potSteps++ >= POT_STEPS){
     potSteps = 0;
-    potVal = analogRead(POT_PIN);
+    sliderVal = analogRead(POT_PIN);
   }
 }
 
@@ -191,7 +226,7 @@ void readPot(){
 void doSweep(){
   
   if(swpMode == SWP_MAN)
-    SWP_STEPS = (potVal >> 5) + 1;
+    SWP_STEPS = 64 - (sliderVal >> 4);
   
   if(swpSteps++ >= SWP_STEPS){    
     swpSteps = 0;
@@ -218,38 +253,21 @@ void timeStep(){
   
 }
 
-void checkRadio(){
-  
-  if(radio.available()){
-    
-    radio.read(&inString, IN_BUFFER);
-    
-    if(strncmp(inString, "COLOR_UP", 8) == 0)
-      return;
-    else if(strncmp(inString, "COLOR_DN", 8) == 0)
-      return;
-    else if(strncmp(inString, "SWEEP_UP", 8) == 0)
-      return;
-    else if(strncmp(inString, "SWEEP_DN", 8) == 0)
-      return;
-    
-  }
-}
-
 void setup(){
-  /*
+  
   radio.begin();
   radio.openReadingPipe(0, address);
   radio.setPALevel(RF24_PA_MIN);
   radio.startListening();
-  */
+  
   prevState = true;
   currentState = true;
   
-  btnSteps = 0;
-  potSteps = 0;
-  swpSteps = 0;
-  clrSteps = 0;
+  btnSteps   = 0;
+  potSteps   = 0;
+  swpSteps   = 0;
+  clrSteps   = 0;
+  radioSteps = 0;
   
   color = CLR_BLK;
   mode = MODE_CLR;
@@ -264,8 +282,10 @@ void setup(){
 void loop() {
 
   readButton();
-  readPot();
   checkRadio();
+  
+  if(manualControl)
+    readPot();
 
   switch(mode){
       

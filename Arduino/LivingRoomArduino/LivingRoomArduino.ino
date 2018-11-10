@@ -45,9 +45,9 @@ decode_results results;
 
 RF24 radio(RADIO_CE, RADIO_CSN);
 const byte address[6] = "test01";
-const char MSG_1[4] = "0001";
-const char MSG_2[4] = "0002";
-const char MSG_3[4] = "0003";
+const char RADIO_BLUE[4] = "BLUE";
+const char RADIO_RIGHT[5] = "RIGHT";
+const char RADIO_LEFT[4] = "LEFT";
 
 void setup()
 {
@@ -139,18 +139,18 @@ void handleRemote(){
         break;
 
       case REMOTE_BLUE:
-        radio.write(&MSG_1, sizeof(MSG_1));
+        radio.write(&RADIO_BLUE, sizeof(RADIO_BLUE));
         break;
         
       case REMOTE_RIGHT:
-        radio.write(&MSG_2, sizeof(MSG_2));
+        radio.write(&RADIO_RIGHT, sizeof(RADIO_RIGHT));
         break;
       
       case REMOTE_UP:
         break;
       
       case REMOTE_LEFT:
-        radio.write(&MSG_3, sizeof(MSG_3));
+        radio.write(&RADIO_LEFT, sizeof(RADIO_LEFT));
         break;
       
       case REMOTE_DOWN:
