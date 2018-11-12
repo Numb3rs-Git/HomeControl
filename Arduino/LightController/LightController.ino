@@ -195,16 +195,43 @@ void checkRadio(){
         manualControl = false;
         nextMode();
       }
-      else if(strncmp(inString, RADIO_RIGHT, sizeof(RADIO_RIGHT)) == 0){
-        manualControl = false;
-        sliderVal += 40;
-        sliderVal = sliderVal > 1023 ? sliderVal - 1023 : sliderVal;
+      
+      if(mode == MODE_SWP || color == CLR_MAN){
+      
+        if(strncmp(inString, RADIO_RIGHT, sizeof(RADIO_RIGHT)) == 0){
+          
+          manualControl = false;
+          
+          sliderVal += 40;
+          
+          if(sliderVal > 1023){
+            
+            if(mode == MODE_SWP)
+              sliderVal = 1023;
+            
+            else if(color == CLR_MAN)
+              sliderVal -= 1024;
+          }
+        }
+        
+        if(strncmp(inString, RADIO_LEFT, sizeof(RADIO_LEFT)) == 0){
+          
+          manualControl = false;
+          
+          sliderVal -= 40;
+          
+          if(sliderVal < 0){
+            
+            if(mode == MODE_SWP)
+              sliderVal = 0;
+            
+            else if(color == CLR_MAN)
+              sliderVal += 1024;
+          }          
+        }
+        
       }
-      else if(strncmp(inString, RADIO_LEFT, sizeof(RADIO_LEFT)) == 0){
-        manualControl = false;
-        sliderVal -= 40;
-        sliderVal = sliderVal < 0 ? sliderVal + 1023 : sliderVal;
-      }
+      
     }
   }
 }
