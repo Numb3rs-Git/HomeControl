@@ -45,14 +45,20 @@
 #define CLR_STEPS   50   // 25ms
 uint8_t SWP_STEPS;
 
+// flags
+boolean prevState, currentState, btnClicked, radioControl;
+
+// timing stuff
+uint32_t t1, t2, dT, temp;
 uint8_t btnSteps, potSteps, swpSteps, clrSteps;
+
+// color stuff
 uint8_t mode, color;
 uint8_t red, green, blue;
 int sliderVal;
 uint16_t sweepPos;
-uint32_t t1, t2, dT, temp;
-boolean prevState, currentState, btnClicked, radioControl;
 
+// radio stuff
 RF24 radio(RADIO_CE, RADIO_CSN);
 const byte address[] = "test01";
 char inString[IN_BUFFER];
@@ -61,14 +67,14 @@ const char RADIO_RIGHT[] = "RIGHT";
 const char RADIO_LEFT[] = "LEFT";
 uint8_t radioSteps;
 
-// outputs the current rgb values
+// output the current rgb values
 void applyColor(){
   analogWrite(RED_PIN, red);
   analogWrite(GRN_PIN, green);
   analogWrite(BLU_PIN, blue);
 }
 
-// maps an integer to its position in a full sweep
+// set color from sweep position
 void setSweepPos(){
   if(sweepPos < 255){
     red = 255 - sweepPos;
@@ -94,54 +100,63 @@ void setSolid(){
     
     switch(color){
       
+      // black
       case CLR_BLK:
         red = 0;
         green = 0;
         blue = 0;
         break;
       
+      // red
       case CLR_RED:
         red = 255;
         green = 0;
         blue = 0;
         break;
-        
+      
+      // green
       case CLR_GRN:
         red = 0;
         green = 255;
         blue = 0;
         break;
-        
+      
+      // blue
       case CLR_BLU:
         red = 0;
         green = 0;
         blue = 255;
         break;
       
+      // cyan
       case CLR_CYN:
         red = 0;
         green = 255;
         blue = 255;
         break;
-        
+      
+      // yellow
       case CLR_YLW:
         red = 255;
         green = 255;
         blue = 0;
         break;
-        
+      
+      // magenta
       case CLR_MAG:
         red = 255;
         green = 0;
         blue = 255;
         break;
-        
+      
+      // white
       case CLR_WHT:
         red = 255;
         green = 255;
         blue = 255;
         break;
         
+      // user select
       case CLR_SEL:
         temp = sliderVal;
         temp *= 764;
@@ -291,7 +306,7 @@ void timeStep(){
   t1 = micros();
 }
 
-// setup as required by ide
+// setup
 void setup(){
   
   // initialize radio

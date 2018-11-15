@@ -3,6 +3,7 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 
+// define pins
 #define RECV_PIN   2
 #define LED_PIN    4
 #define BTN_PIN    3
@@ -13,6 +14,7 @@
 #define RADIO_CSN  9
 #define IN_BUFFER 20
 
+// define remote button values
 #define REMOTE_RED    0x4FB3AC5
 #define REMOTE_GREEN  0x4FBBA45
 #define REMOTE_YELLOW 0x4FB7A85
@@ -23,76 +25,30 @@
 #define REMOTE_DOWN   0x4FBB24D
 #define REMOTE_ENTER  0x4FB52AD
 
-boolean overrideState;
-boolean relayState;
+// flags
+boolean overrideState, relayState;
+boolean btnState, btnPrev;
+boolean motionState, motionPrev;
+boolean doorOpen, doorPrev;
 
-boolean btnState;
-boolean btnPrev;
-
-boolean motionState;
-boolean motionPrev;
-
-boolean doorOpen;
-boolean doorPrev;
-
+// serial stuff
 boolean inputRecieved;
 char inString[IN_BUFFER];
 char charin;
 uint8_t nChars;
 
+// remote stuff
 IRrecv irrecv(RECV_PIN);
 decode_results results;
 
+// radio stuff
 RF24 radio(RADIO_CE, RADIO_CSN);
 const byte address[] = "test01";
 const char RADIO_BLUE[] = "BLUE";
 const char RADIO_RIGHT[] = "RIGHT";
 const char RADIO_LEFT[] = "LEFT";
 
-void setup()
-{
-  overrideState = false;
-  relayState = false;
-  inputRecieved = false;
-  nChars = 0;
-  
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, overrideState);
-  
-  pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, LOW);
-  
-  pinMode(BTN_PIN, INPUT_PULLUP);
-  btnState = digitalRead(BTN_PIN);
-
-  pinMode(MOTION_PIN, INPUT);
-  motionState = digitalRead(MOTION_PIN);
-  
-  pinMode(DOOR_PIN, INPUT);
-  doorOpen = digitalRead(DOOR_PIN);
-  
-  irrecv.enableIRIn();
-  
-  Serial.begin(9600);
-  
-  radio.begin();
-  radio.openWritingPipe(address);
-  radio.setPALevel(RF24_PA_MIN);
-  radio.stopListening();
-}
-
-void loop() {
-
-  handleRemote();
-  handleSerial();
-  
-  checkButton();
-  checkDoor();
-  checkMotion();
-  
-  delay(10);
-}
-
+// check the button
 void checkButton(){
   btnPrev = btnState;
   btnState = digitalRead(BTN_PIN);
@@ -100,6 +56,7 @@ void checkButton(){
     toggleOverride();
 }
 
+// check the motion sensor
 void checkMotion(){
   motionPrev = motionState;
   motionState = digitalRead(MOTION_PIN);
@@ -107,6 +64,7 @@ void checkMotion(){
     Serial.print(F("MOTION_EVENT\n"));
 }
 
+// check the door sensor
 void checkDoor(){
   doorPrev = doorOpen;
   doorOpen = digitalRead(DOOR_PIN);
@@ -121,6 +79,7 @@ void checkDoor(){
     setRelay(doorOpen);
 }
 
+// process messages from remote
 void handleRemote(){
 
   if(irrecv.decode(&results)){
@@ -166,6 +125,7 @@ void handleRemote(){
   }
 }
 
+// process a received serial string
 void handleSerial(){
   if(inputRecieved){
     
@@ -178,6 +138,7 @@ void handleSerial(){
   }
 }
 
+// read from serial when available
 void serialEvent(){
   while(Serial.available()){
     charin = (char)Serial.read();
@@ -188,6 +149,7 @@ void serialEvent(){
   }
 }
 
+// toggle override state
 void toggleOverride(){
   overrideState = !overrideState;
   if(overrideState)
@@ -197,11 +159,71 @@ void toggleOverride(){
   digitalWrite(LED_PIN, overrideState);
 }
 
+// switch the relay
 void setRelay(boolean state){
-  if(state && !relayState)
-    Serial.print(F("RELAY_ON\n"));
-  else if(!state && relayState)
-    Serial.print(F("RELAY_OFF\n"));
-  relayState = state;
-  digitalWrite(RELAY_PIN, relayState);
+  
+  if(state != relayState){
+    if(state)
+      Serial.print(F("RELAY_ON\n"));
+    else
+      Serial.print(F("RELAY_OFF\n"));
+    relayState = state;
+    digitalWrite(RELAY_PIN, relayState);
+  }
+}
+
+// setup
+void setup(){
+  
+  // initialize control vars
+  overrideState = false;
+  relayState = false;
+  inputRecieved = false;
+  nChars = 0;
+  
+  // initialize connected devices
+  // led
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, overrideState);
+  
+  // relay
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
+  
+  // button
+  pinMode(BTN_PIN, INPUT_PULLUP);
+  btnState = digitalRead(BTN_PIN);
+
+  // motion sensor
+  pinMode(MOTION_PIN, INPUT);
+  motionState = digitalRead(MOTION_PIN);
+  
+  // door sensor
+  pinMode(DOOR_PIN, INPUT);
+  doorOpen = digitalRead(DOOR_PIN);
+  
+  // serial
+  Serial.begin(9600);
+  
+  // remote control
+  irrecv.enableIRIn();
+  
+  // radio module
+  radio.begin();
+  radio.openWritingPipe(address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.stopListening();
+}
+
+// main loop
+void loop() {
+
+  handleRemote();
+  handleSerial();
+  
+  checkButton();
+  checkDoor();
+  checkMotion();
+  
+  delay(10);
 }
